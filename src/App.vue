@@ -8,6 +8,13 @@ const view = ref(location.hash.slice(1) || 'home')
 addEventListener('hashchange', () => { view.value = location.hash.slice(1) || 'home'; scrollTo(0, 0) })
 const sport = computed(() => sportById(view.value))
 
+const theme = ref(document.documentElement.dataset.theme || 'light')
+function toggleTheme() {
+  theme.value = theme.value === 'dark' ? 'light' : 'dark'
+  document.documentElement.dataset.theme = theme.value
+  try { localStorage.setItem('liga-theme', theme.value) } catch {}
+}
+
 const asking = ref(false), pw = ref(''), err = ref('')
 async function doLogin() {
   if (await login(pw.value)) { asking.value = false; pw.value = ''; err.value = '' }
@@ -17,10 +24,16 @@ onMounted(load)
 </script>
 
 <template>
-  <div :style="{ '--c': sport ? sport.color : '#1b1f24' }">
+  <div :style="{ '--c': sport ? sport.color : 'var(--home)' }">
     <header class="top">
-      <h1>Liga de Recreos</h1>
-      <p>Clasificaciones, calendario, resultados y pistas.</p>
+      <button class="theme" :aria-label="theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'" @click="toggleTheme">{{ theme === 'dark' ? '☀️' : '🌙' }}</button>
+      <div class="brand">
+        <img class="logo" src="/logo.png" alt="Torneo C.E. 2026-27" width="112" height="112">
+        <div>
+          <h1>Liga de Recreos</h1>
+          <p>Clasificaciones, calendario, resultados y pistas.</p>
+        </div>
+      </div>
       <div class="adminbar">
         <template v-if="state.mode === 'demo'"><span class="chip">Modo demo: los datos solo se guardan en este navegador</span></template>
         <template v-if="state.admin">
