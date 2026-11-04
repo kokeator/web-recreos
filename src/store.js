@@ -90,8 +90,19 @@ export function addPlayer(team, name) {
 export function removePlayer(team, i) { team.players.splice(i, 1); commit() }
 export function setSport(sport, key, val) { sport[key] = val; commit() }
 export function edit(m, key, val) {
-  m[key] = (key === 'hs' || key === 'as') ? (val === '' ? null : Number(val)) : val; commit()
+  if (key === 'hs' || key === 'as') m[key] = val === '' ? null : Number(val)
+  else if (key === 'jornada') m[key] = Math.max(1, Number(val) || 1)
+  else m[key] = val
+  commit()
 }
+// Calendario manual: añadir o quitar un partido suelto.
+export function addMatch(sportId, f) {
+  state.data.matches.push({
+    id: uid(), sportId, jornada: f.jornada, homeId: f.homeId, awayId: f.awayId,
+    date: f.date, time: f.time, court: f.court, hs: null, as: null,
+  }); commit()
+}
+export function removeMatch(id) { state.data.matches = state.data.matches.filter(m => m.id !== id); commit() }
 // Genera el calendario todos-contra-todos de un deporte (borra el anterior).
 export function generate(sportId) {
   const d = state.data, sp = sportById(sportId)

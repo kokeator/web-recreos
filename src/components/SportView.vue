@@ -5,6 +5,7 @@ import { standings } from '../lib/league'
 import Standings from './Standings.vue'
 import Matches from './Matches.vue'
 import Teams from './Teams.vue'
+import ManualMatch from './ManualMatch.vue'
 
 const p = defineProps({ sport: Object })
 const sub = ref('clas')
@@ -34,7 +35,11 @@ const setCourts = v => setSport(p.sport, 'courts', v.split(',').map(s => s.trim(
 
   <section v-else-if="sub === 'cal'">
     <h2>Calendario</h2>
-    <button v-if="state.admin" class="btn" @click="regen">{{ matches.length ? 'Volver a generar calendario' : 'Generar calendario' }}</button>
+    <template v-if="state.admin">
+      <p class="note">Puedes crear el calendario tú, partido a partido, o generarlo solo con todos contra todos.</p>
+      <ManualMatch :sport="sport" :teams="teams" :matches="matches" />
+      <button class="btn ghost" @click="regen">{{ matches.length ? 'Regenerar calendario automático' : 'Generar calendario automático' }}</button>
+    </template>
     <Matches :matches="matches" :editable="state.admin" by-jornada />
   </section>
 
