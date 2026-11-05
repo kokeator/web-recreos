@@ -104,14 +104,34 @@ export function addMatch(sportId, f) {
 }
 export function removeMatch(id) { state.data.matches = state.data.matches.filter(m => m.id !== id); commit() }
 // Genera el calendario todos-contra-todos de un deporte (borra el anterior).
+// Si los equipos tienen grupo, se juega dentro de cada grupo (fase de grupos).
 export function generate(sportId) {
   const d = state.data, sp = sportById(sportId)
-  const ids = teamsOf(sportId).map(t => t.id)
   d.matches = d.matches.filter(m => m.sportId !== sportId)
-  roundRobin(ids).forEach((ms, j) => ms.forEach(([homeId, awayId], k) => d.matches.push({
+  const byGroup = {}
+  teamsOf(sportId).forEach(t => (byGroup[t.group || ''] ||= []).push(t.id))
+  const rounds = []
+  Object.keys(byGroup).sort().forEach(g => roundRobin(byGroup[g]).forEach((ms, j) => (rounds[j] ||= []).push(...ms)))
+  rounds.forEach((ms, j) => ms.forEach(([homeId, awayId], k) => d.matches.push({
     id: uid(), sportId, jornada: j + 1, homeId, awayId,
     date: addDays(d.start, sp.day - 1 + 7 * j), time: sp.time,
     court: sp.courts[k % sp.courts.length] || '', hs: null, as: null,
   })))
   commit()
+}
+
+// ---------- Grupos ----------
+export const GROUPS = 'ABCDEFGH'.split('')
+export function setGroup(team, g) { team.group = g; commit() }
+export function splitGroups(sportId, n, random) {
+  const ts = teamsOf(sportId).slice()
+  if (random) for (let i = ts.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [ts[i], ts[j]] = [ts[j], ts[i]] }
+  ts.forEach((t, i) => { t.group = GROUPS[i % n] })
+  commit()
+}
+export function clearGroups(sportId) { teamsOf(sportId).forEach(t => { t.group = '' }); commit() }
+// "Grupo A" si los dos equipos del partido son del mismo grupo, si no ''.
+export function groupLabel(m) {
+  const a = state.data.teams.find(t => t.id === m.homeId), b = state.data.teams.find(t => t.id === m.awayId)
+  return a && b && a.group && a.group === b.group ? `Grupo ${a.group}` : ''
 }

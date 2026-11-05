@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { teamName, teamsOf, sportById, edit, removeMatch } from '../store'
+import { teamName, teamsOf, sportById, edit, removeMatch, groupLabel } from '../store'
 import { fmtDate } from '../lib/league'
 
 const p = defineProps({ matches: Array, editable: Boolean, showSport: Boolean, byJornada: Boolean })
@@ -14,6 +14,7 @@ const groups = computed(() => {
   }
   return [...g.values()]
 })
+const gl = m => groupLabel(m) ? groupLabel(m) + ' · ' : ''
 const label = m => { const s = sportById(m.sportId); return s ? `${s.icon} ${s.name} · ` : '' }
 </script>
 
@@ -43,7 +44,7 @@ const label = m => { const s = sportById(m.sportId); return s ? `${s.icon} ${s.n
         <input type="text" :value="m.court" placeholder="Pista" @change="edit(m, 'court', $event.target.value)">
         <button type="button" class="x" @click="removeMatch(m.id)">Borrar</button>
       </div>
-      <div v-else class="meta">{{ showSport ? label(m) : '' }}{{ m.time }} · 📍 {{ m.court }}</div>
+      <div v-else class="meta">{{ showSport ? label(m) : '' }}{{ gl(m) }}{{ m.time }} · 📍 {{ m.court }}</div>
     </div>
   </div>
 </template>

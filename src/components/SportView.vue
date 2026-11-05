@@ -14,7 +14,15 @@ const teams = computed(() => teamsOf(p.sport.id))
 const matches = computed(() => state.data.matches
   .filter(m => m.sportId === p.sport.id)
   .sort((a, b) => a.jornada - b.jornada || a.time.localeCompare(b.time)))
-const rows = computed(() => standings(teams.value, matches.value))
+// Una tabla por grupo (o una sola si no hay grupos)
+const tables = computed(() => {
+  const names = [...new Set(teams.value.map(t => t.group || ''))].sort()
+  return names.map(g => ({
+    name: g,
+    title: g ? `Grupo ${g}` : (names.length > 1 ? 'Sin grupo' : ''),
+    rows: standings(teams.value.filter(t => (t.group || '') === g), matches.value),
+  }))
+})
 const tabs = computed(() => [['clas', 'Clasificación'], ['cal', 'Calendario y resultados'], ['eq', 'Equipos y jugadores'], ...(state.admin ? [['aj', 'Ajustes']] : [])])
 
 function regen() {
@@ -31,7 +39,11 @@ const setCourts = v => setSport(p.sport, 'courts', v.split(',').map(s => s.trim(
     <button v-for="[k, l] in tabs" :key="k" class="sub" :aria-current="sub === k" @click="sub = k">{{ l }}</button>
   </div>
 
-  <section v-if="sub === 'clas'"><h2>Clasificación</h2><Standings :rows="rows" /></section>
+  <section v-if="sub === 'clas'"><h2>Clasificación</h2>
+    <p v-if="!teams.length" class="empty">Añade equipos para ver la clasificación.</p>
+    <Standings v-for="t in tables" :key="t.name" :rows="t.rows" :title="t.title" />
+    <p class="note">Victoria 3 puntos · empate 1 · derrota 0.</p>
+  </section>
 
   <section v-else-if="sub === 'cal'">
     <h2>Calendario</h2>

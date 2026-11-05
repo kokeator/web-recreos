@@ -1,10 +1,10 @@
 <script setup>
-defineProps({ rows: Array })
+defineProps({ rows: Array, title: String })
 </script>
 
 <template>
-  <p v-if="!rows.length" class="empty">Añade equipos para ver la clasificación.</p>
-  <div v-else class="box">
+  <h3 v-if="title" class="gt">{{ title }}</h3>
+  <div class="box">
     <table>
       <thead><tr><th>#</th><th>Equipo</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>GF</th><th>GC</th><th>DG</th><th>Pts</th></tr></thead>
       <tbody>
@@ -15,5 +15,4 @@ defineProps({ rows: Array })
       </tbody>
     </table>
   </div>
-  <p class="note">Victoria 3 puntos · empate 1 · derrota 0.</p>
 </template>
