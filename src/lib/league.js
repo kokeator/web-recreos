@@ -35,3 +35,6 @@ export function standings(teams, matches) {
   }
   return Object.values(t).sort((x, y) => y.pts - x.pts || (y.gf - y.gc) - (x.gf - x.gc) || y.gf - x.gf || x.name.localeCompare(y.name))
 }
+
+// Fecha efectiva de un partido: la nueva si está aplazado ('' si aún no hay fecha nueva).
+export const effDate = m => m.postponed ? (m.postponedTo || '') : m.date

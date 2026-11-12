@@ -93,6 +93,7 @@ export function edit(m, key, val) {
   if (key === 'hs' || key === 'as') m[key] = val === '' ? null : Number(val)
   else if (key === 'jornada') m[key] = Math.max(1, Number(val) || 1)
   else m[key] = val
+  if (key === 'postponed' && !val) m.postponedTo = ''
   commit()
 }
 // Calendario manual: añadir o quitar un partido suelto.

@@ -141,3 +141,11 @@ select.h{text-align:right}
 .chk input{width:auto}
 .grpsel{display:flex;align-items:center;gap:8px;font-weight:600;font-size:.9rem;margin:8px 0}
 .gchip{background:var(--c);color:#fff;font-weight:700}
+
+/* ---------- Aplazados y MVP ---------- */
+.badge{display:inline-block;background:#e8590c;color:#fff;border-radius:6px;padding:1px 9px;margin-right:6px;
+  font-family:var(--disp);font-weight:800;font-size:.95rem;letter-spacing:.04em;text-transform:uppercase}
+.match.postponed{background:color-mix(in srgb,#e8590c 8%,var(--card))}
+.mvp{grid-column:1/-1;text-align:center;font-family:var(--disp);font-weight:700;font-size:1.1rem;letter-spacing:.03em;text-transform:uppercase}
+.chk-inline{display:flex;align-items:center;gap:4px;font-size:.9rem;font-weight:600;color:var(--ink)}
+.chk-inline input{width:auto}

@@ -2,12 +2,13 @@
 import { computed } from 'vue'
 import { state } from '../store'
 import Matches from './Matches.vue'
+import { effDate } from '../lib/league'
 
 const DAYS = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
 const today = new Date().toISOString().slice(0, 10)
-const key = m => m.date + m.time
+const key = m => (effDate(m) || '9999-12-31') + m.time
 const played = m => m.hs != null && m.as != null
-const next = computed(() => state.data.matches.filter(m => !played(m) && m.date >= today).sort((a, b) => key(a).localeCompare(key(b))).slice(0, 8))
+const next = computed(() => state.data.matches.filter(m => !played(m) && (!effDate(m) || effDate(m) >= today)).sort((a, b) => key(a).localeCompare(key(b))).slice(0, 8))
 const last = computed(() => state.data.matches.filter(played).sort((a, b) => key(b).localeCompare(key(a))).slice(0, 6))
 </script>
 
