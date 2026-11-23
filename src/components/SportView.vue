@@ -6,6 +6,7 @@ import Standings from './Standings.vue'
 import Matches from './Matches.vue'
 import Teams from './Teams.vue'
 import ManualMatch from './ManualMatch.vue'
+import Bracket from './Bracket.vue'
 
 const p = defineProps({ sport: Object })
 const sub = ref('clas')
@@ -102,7 +103,11 @@ const setCourts = v => setSport(p.sport, 'courts', v.split(',').map(s => s.trim(
       </div>
       <p class="note">Clasificados con la tabla actual: {{ qualNames.join(', ') || 'ninguno todavía' }}.</p>
     </div>
-    <Matches v-if="ko.length" :matches="ko" :editable="state.admin" by-jornada />
+    <template v-if="ko.length">
+      <Bracket :ko="ko" />
+      <h2>Partidos y resultados</h2>
+      <Matches :matches="ko" :editable="state.admin" by-jornada />
+    </template>
     <p v-else class="empty">Las eliminatorias todavía no se han generado.</p>
   </section>
 
