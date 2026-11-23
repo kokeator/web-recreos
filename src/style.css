@@ -149,3 +149,9 @@ select.h{text-align:right}
 .mvp{grid-column:1/-1;text-align:center;font-family:var(--disp);font-weight:700;font-size:1.1rem;letter-spacing:.03em;text-transform:uppercase}
 .chk-inline{display:flex;align-items:center;gap:4px;font-size:.9rem;font-weight:600;color:var(--ink)}
 .chk-inline input{width:auto}
+
+/* ---------- Eliminatorias ---------- */
+.champ{background:var(--lime);color:var(--pitch);border-radius:10px;padding:10px 16px;margin:8px 0 14px;
+  font-family:var(--disp);font-weight:800;font-style:italic;font-size:1.7rem;text-transform:uppercase}
+.boxtitle{font-family:var(--disp);font-size:1.2rem;text-transform:uppercase;font-style:italic}
+.form .chk-inline{display:flex}

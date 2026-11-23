@@ -1,5 +1,5 @@
 import { reactive } from 'vue'
-import { roundRobin, addDays } from './lib/league'
+import { roundRobin, addDays, effDate, qualifiers, seedOrder, shuffle } from './lib/league'
 
 const uid = () => Math.random().toString(36).slice(2, 9)
 const S = (id, name, icon, color, day, time, courts) => ({ id, name, icon, color, day, time, courts })
@@ -71,7 +71,7 @@ export function commit() {
 // ---------- Consultas ----------
 export const sportById = id => state.data.sports.find(s => s.id === id)
 export const teamsOf = sportId => state.data.teams.filter(t => t.sportId === sportId)
-export const teamName = id => (state.data.teams.find(t => t.id === id) || {}).name || '—'
+export const teamName = id => id ? ((state.data.teams.find(t => t.id === id) || {}).name || '—') : 'Por definir'
 
 // ---------- Acciones (solo admin) ----------
 export function addTeam(sportId, name) {
@@ -112,7 +112,11 @@ export function generate(sportId) {
   const byGroup = {}
   teamsOf(sportId).forEach(t => (byGroup[t.group || ''] ||= []).push(t.id))
   const rounds = []
-  Object.keys(byGroup).sort().forEach(g => roundRobin(byGroup[g]).forEach((ms, j) => (rounds[j] ||= []).push(...ms)))
+  Object.keys(byGroup).sort().forEach(g => {
+    let rr = roundRobin(byGroup[g])
+    if (sp.vuelta) rr = [...rr, ...rr.map(ms => ms.map(([h, a]) => [a, h]))] // ida y vuelta
+    rr.forEach((ms, j) => (rounds[j] ||= []).push(...ms))
+  })
   rounds.forEach((ms, j) => ms.forEach(([homeId, awayId], k) => d.matches.push({
     id: uid(), sportId, jornada: j + 1, homeId, awayId,
     date: addDays(d.start, sp.day - 1 + 7 * j), time: sp.time,
@@ -134,5 +138,86 @@ export function clearGroups(sportId) { teamsOf(sportId).forEach(t => { t.group =
 // "Grupo A" si los dos equipos del partido son del mismo grupo, si no ''.
 export function groupLabel(m) {
   const a = state.data.teams.find(t => t.id === m.homeId), b = state.data.teams.find(t => t.id === m.awayId)
-  return a && b && a.group && a.group === b.group ? `Grupo ${a.group}` : ''
+  return m.stage !== 'ko' && a && b && a.group && a.group === b.group ? `Grupo ${a.group}` : ''
+}
+
+// ---------- Eliminatorias ----------
+const byId = id => state.data.matches.find(m => m.id === id)
+// Ganador de un partido o eliminatoria ('' si aún no se sabe).
+// Si el partido tiene vuelta (otro partido con legOf = su id), gana el global de los dos partidos.
+// En empate (penaltis/prórroga) se usa winnerId, que se elige a mano.
+export function winnerId(m) {
+  if (!m) return ''
+  const v = state.data.matches.find(x => x.legOf === m.id)
+  if (v) {
+    if ([m.hs, m.as, v.hs, v.as].some(x => x == null)) return ''
+    const h = homeOf(m), a = awayOf(m), gh = m.hs + v.as, ga = m.as + v.hs
+    return gh > ga ? h : gh < ga ? a : (m.winnerId || '')
+  }
+  if (m.hs == null || m.as == null) return ''
+  if (m.hs > m.as) return homeOf(m)
+  if (m.hs < m.as) return awayOf(m)
+  return m.winnerId || ''
+}
+// En la vuelta, local y visitante son los de la ida al revés.
+export const homeOf = m => m.legOf ? awayOf(byId(m.legOf)) : (m.homeId || (m.srcHome ? winnerId(byId(m.srcHome)) : ''))
+export const awayOf = m => m.legOf ? homeOf(byId(m.legOf)) : (m.awayId || (m.srcAway ? winnerId(byId(m.srcAway)) : ''))
+
+// Clasificados por defecto según el formato de cada deporte (se pueden cambiar en la web).
+export const defaultQuota = (sportId, g) => (sportId === 'futbol' && { A: 3, B: 3, C: 2 }[g]) || 2
+export const defaultTotal = sportId => sportId.startsWith('padel') ? 8 : 4
+const ROUND = { 2: 'Final', 4: 'Semifinales', 8: 'Cuartos de final', 16: 'Octavos de final' }
+
+// mode: 'seed' (por clasificación) | 'random' (al azar) | 'manual' (huecos vacíos). Devuelve un error o ''.
+export function generateKO(sportId, mode) {
+  const d = state.data, sp = sportById(sportId)
+  const liga = d.matches.filter(m => m.sportId === sportId && m.stage !== 'ko')
+  const teams = teamsOf(sportId)
+  const names = [...new Set(teams.map(t => t.group || ''))].sort()
+  const grouped = names.some(g => g !== '')
+  const quota = g => (sp.qual && sp.qual[g] != null) ? sp.qual[g] : defaultQuota(sportId, g)
+  const total = sp.qualTotal != null ? sp.qualTotal : defaultTotal(sportId)
+  const n = grouped ? names.reduce((s, g) => s + quota(g), 0) : total
+  if (!ROUND[n]) return `Hay ${n} clasificados: tienen que ser 2, 4, 8 o 16.`
+  const ids = qualifiers(teams, liga, quota, total)
+  if (mode !== 'manual' && ids.length !== n) return `Faltan equipos: se necesitan ${n} y solo hay ${ids.length}.`
+
+  const slots = n / 2, order = seedOrder(n)
+  let pairs
+  if (mode === 'manual') pairs = Array.from({ length: slots }, () => ['', ''])
+  else if (mode === 'random') { const s = shuffle(ids); pairs = Array.from({ length: slots }, (_, i) => [s[2 * i], s[2 * i + 1]]) }
+  else pairs = Array.from({ length: slots }, (_, i) => [ids[order[2 * i] - 1], ids[order[2 * i + 1] - 1]])
+
+  const dates = liga.map(m => effDate(m) || m.date).filter(Boolean).sort()
+  const base = dates.length ? dates[dates.length - 1] : addDays(d.start, sp.day - 1)
+  const maxJ = Math.max(0, ...liga.map(m => m.jornada))
+  d.matches = d.matches.filter(m => !(m.sportId === sportId && m.stage === 'ko'))
+  const vuelta = Boolean(sp.koVuelta)
+  let prev = [], j = 0 // j = nº de jornadas de eliminatoria ya ocupadas
+  for (let count = slots; count >= 1; count /= 2) {
+    const two = vuelta && !(count === 1 && sp.koFinalUnica)
+    const row = []
+    for (let k = 0; k < count; k++) {
+      const court = sp.courts[k % sp.courts.length] || ''
+      const m = {
+        id: uid(), sportId, stage: 'ko', round: ROUND[count * 2], jornada: maxJ + j + 1,
+        homeId: '', awayId: '', date: addDays(base, 7 * (j + 1)), time: sp.time, court, hs: null, as: null,
+      }
+      if (two) m.leg = 1
+      if (j === 0) { m.homeId = pairs[k][0]; m.awayId = pairs[k][1] }
+      else { m.srcHome = prev[2 * k].id; m.srcAway = prev[2 * k + 1].id }
+      row.push(m)
+      d.matches.push(m)
+      if (two) d.matches.push({
+        id: uid(), sportId, stage: 'ko', round: m.round, leg: 2, legOf: m.id, jornada: maxJ + j + 2,
+        date: addDays(base, 7 * (j + 2)), time: sp.time, court, hs: null, as: null,
+      })
+    }
+    prev = row; j += two ? 2 : 1
+  }
+  commit()
+  return ''
+}
+export function clearKO(sportId) {
+  state.data.matches = state.data.matches.filter(m => !(m.sportId === sportId && m.stage === 'ko')); commit()
 }

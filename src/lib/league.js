@@ -38,3 +38,28 @@ export function standings(teams, matches) {
 
 // Fecha efectiva de un partido: la nueva si está aplazado ('' si aún no hay fecha nueva).
 export const effDate = m => m.postponed ? (m.postponedTo || '') : m.date
+
+// ---------- Eliminatorias ----------
+export const shuffle = a => {
+  const x = a.slice()
+  for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [x[i], x[j]] = [x[j], x[i]] }
+  return x
+}
+// Orden de cabezas de serie para que 1º y 2º solo se crucen en la final: 8 -> [1,8,4,5,2,7,3,6]
+export function seedOrder(n) {
+  let o = [1, 2]
+  while (o.length < n) o = o.flatMap(x => [x, o.length * 2 + 1 - x])
+  return o
+}
+// Clasificados (ids ordenados de mejor a peor). Con grupos: los N primeros de cada grupo
+// (quotaOf(grupo)); se ordenan por posición en su grupo y luego por puntos. Sin grupos: los `total` primeros.
+export function qualifiers(teams, matches, quotaOf, total) {
+  const groups = [...new Set(teams.map(t => t.group || ''))].sort()
+  if (groups.every(g => g === '')) return standings(teams, matches).slice(0, total).map(r => r.id)
+  const picked = []
+  for (const g of groups) {
+    standings(teams.filter(t => (t.group || '') === g), matches).slice(0, quotaOf(g)).forEach((r, i) => picked.push({ ...r, pos: i }))
+  }
+  picked.sort((a, b) => a.pos - b.pos || b.pts - a.pts || (b.gf - b.gc) - (a.gf - a.gc) || b.gf - a.gf)
+  return picked.map(r => r.id)
+}
